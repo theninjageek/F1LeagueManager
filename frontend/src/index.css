@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* This is where we define your "Industrial" design system for v4 */
+@theme {
+  --color-carbon: #050505;
+  --color-f1-red: #E10600;
+}
+
+@layer components {
+  .f1-border-top {
+    border-top: 4px solid var(--color-f1-red);
+  }
+  
+  .f1-skew {
+    transform: skewX(-15deg);
+  }
+
+  .f1-unskew {
+    transform: skewX(15deg);
+    display: inline-block;
+  }
+}
+
+body {
+  background-color: var(--color-carbon);
+  color: white;
+}
