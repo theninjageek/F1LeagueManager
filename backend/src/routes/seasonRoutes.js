@@ -10,21 +10,6 @@ router.get('/', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// GET events for a season (with Track Name and Country)
-router.get('/:id/events', async (req, res) => {
-  try {
-    const query = `
-      SELECT e.*, t.name as track_name, t.location as track_location
-      FROM events e
-      JOIN tracks t ON e.track_id = t.id
-      WHERE e.season_id = $1
-      ORDER BY e.round_number ASC;
-    `;
-    const { rows } = await db.query(query, [req.params.id]);
-    res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 router.get('/active', async (req, res) => {
   try {
     const result = await db.query(`
@@ -44,6 +29,22 @@ router.get('/active', async (req, res) => {
   }
 });
 
+// GET events for a season (with Track Name and Country)
+router.get('/:id/events', async (req, res) => {
+  try {
+    const query = `
+      SELECT e.*, t.name as track_name, t.location as track_location
+      FROM events e
+      JOIN tracks t ON e.track_id = t.id
+      WHERE e.season_id = $1
+      ORDER BY e.round_number ASC;
+    `;
+    const { rows } = await db.query(query, [req.params.id]);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
 // POST new season
 router.post('/', async (req, res) => {
   const { name, points_matrix } = req.body;
@@ -59,13 +60,26 @@ router.patch('/events/:eventId', async (req, res) => {
   const { eventId } = req.params;
   const updates = req.body;
   
-  const setClause = Object.keys(updates).map((key, i) => `${key} = $${i + 1}`).join(', ');
-  const values = Object.values(updates);
-
+  // Whitelist allowed fields
+  const allowedFields = ['has_sprint', 'is_completed', 'is_reverse', 'has_qualifying', 'has_race', 'points_multiplier'];
+  const filteredUpdates = {};
+  
+  for (const field of allowedFields) {
+    if (field in updates) filteredUpdates[field] = updates[field];
+  }
+  
+  if (Object.keys(filteredUpdates).length === 0) {
+    return res.status(400).json({ error: "No valid fields to update" });
+  }
+  
+  const setClause = Object.keys(filteredUpdates)
+    .map((key, i) => `${key} = $${i + 1}`)
+    .join(', ');
+  
   try {
     const { rows } = await db.query(
-      `UPDATE events SET ${setClause} WHERE id = $${values.length + 1} RETURNING *`,
-      [...values, eventId]
+      `UPDATE events SET ${setClause} WHERE id = $${Object.keys(filteredUpdates).length + 1} RETURNING *`,
+      [...Object.values(filteredUpdates), eventId]
     );
     res.json(rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }

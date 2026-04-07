@@ -28,7 +28,7 @@ CREATE TABLE teams (
 CREATE TABLE drivers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL, -- Single Name field for privacy
-    country_code_code CHAR(2),
+    country_code CHAR(2),
     race_number INT,
     is_ai BOOLEAN DEFAULT FALSE,
     current_team_id INT REFERENCES teams(id) ON DELETE SET NULL
@@ -98,11 +98,6 @@ CREATE TABLE IF NOT EXISTS sessions (
   FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
 );
 
--- Insert default admin user (username: admin, password: admin123)
--- Password hash generated with Argon2id
--- IMPORTANT: Change this password immediately after first login!
-INSERT INTO admin_users (username, password_hash) 
-  VALUES ('admin', '$argon2id$v=19$m=65536,t=3,p=4$UIhmXHYay4Z7oxt0TQjNkQ$G+EronwAjPoIW62WECg1tIyP80OG/6SKrRIx0W9L8bM');
 
 -- 1. SEED: F1 25 TEAMS
 INSERT INTO public.teams (id, name, color_hex, team_icon_url) VALUES (1, 'Oracle Red Bull Racing', '#3671C6', '/logos/redbull.svg');
