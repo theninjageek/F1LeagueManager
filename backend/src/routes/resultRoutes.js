@@ -1,25 +1,36 @@
 const express = require('express');
 const router = express.Router();
 const resultService = require('../services/resultService');
+const { sendSuccess, sendError } = require('../middleware/responseHandler');
+const { validateIntParam } = require('../middleware/validateRequest');
+const { AppError } = require('../utils/errorHandler');
 
-// GET Results for a specific race
-router.get('/event/:eventId', async (req, res) => {
+// GET /api/results/event/:eventId
+router.get('/event/:eventId', validateIntParam('eventId'), async (req, res, next) => {
   try {
     const { eventId } = req.params;
-    const sessionType = req.query.type || 'GRAND_PRIX'; // Default to GP
+    const sessionType = req.query.type || 'GRAND_PRIX';
+
+    const validSessions = ['QUALIFYING', 'SPRINT_QUALIFYING', 'SPRINT_RACE', 'GRAND_PRIX'];
+    if (!validSessions.includes(sessionType)) {
+      throw new AppError(`Invalid session type: ${sessionType}`, 400);
+    }
+
     const results = await resultService.getResultsByEvent(eventId, sessionType);
-    res.json(results);
+    sendSuccess(res, results);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/sessions/:eventId', async (req, res) => {
+// GET /api/results/sessions/:eventId
+router.get('/sessions/:eventId', validateIntParam('eventId'), async (req, res, next) => {
   try {
-    const sessions = await resultService.getAvailableSessions(req.params.eventId);
-    res.json(sessions);
+    const { eventId } = req.params;
+    const sessions = await resultService.getAvailableSessions(eventId);
+    sendSuccess(res, sessions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

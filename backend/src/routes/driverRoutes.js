@@ -1,46 +1,49 @@
 const express = require('express');
 const router = express.Router();
 const driverService = require('../services/driverService');
+const { sendSuccess } = require('../middleware/responseHandler');
+const { validateRequired, validateIntParam } = require('../middleware/validateRequest');
 
 // GET all drivers
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
   try {
     const drivers = await driverService.getAllDrivers();
-    res.json(drivers);
+    sendSuccess(res, drivers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-// POST sign new driver
-router.post('/', async (req, res) => {
+// POST create driver
+router.post('/', validateRequired(['name', 'current_team_id']), async (req, res, next) => {
   try {
     const newDriver = await driverService.createDriver(req.body);
-    res.status(201).json(newDriver);
+    sendSuccess(res, newDriver, 201, 'Driver created successfully');
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-// PUT transfer driver to new team
-router.put('/:id/transfer', async (req, res) => {
-  const { teamId } = req.body;
+// PUT transfer driver
+router.put('/:id/transfer', validateIntParam('id'), validateRequired(['teamId']), async (req, res, next) => {
   try {
-    const updated = await driverService.updateDriverTeam(req.params.id, teamId);
-    res.json(updated);
+    const { id } = req.params;
+    const { teamId } = req.body;
+    const updated = await driverService.updateDriverTeam(id, teamId);
+    sendSuccess(res, updated, 200, 'Driver transferred successfully');
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-// DELETE release driver from market
-router.delete('/:id', async (req, res) => {
+// DELETE driver
+router.delete('/:id', validateIntParam('id'), async (req, res, next) => {
   try {
-    const deleted = await driverService.deleteDriver(req.params.id);
-    if (!deleted) return res.status(404).json({ message: "Driver not found" });
-    res.json({ message: "Contract terminated", driver: deleted });
+    const { id } = req.params;
+    const deleted = await driverService.deleteDriver(id);
+    sendSuccess(res, deleted, 200, 'Driver contract terminated');
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

@@ -1,5 +1,11 @@
 const express = require('express');
 const cors = require('cors');
+const morgan = require('morgan'); // Add logging
+const errorHandler = require('./middleware/errorHandler');
+const requestLogger = require('./middleware/requestLogger');
+const { limiter } = require('./middleware/rateLimiter');
+
+// Routes
 const standingRoutes = require('./routes/standingRoutes');
 const driverRoutes = require('./routes/driverRoutes');
 const eventRoutes = require('./routes/eventRoutes');
@@ -11,10 +17,19 @@ const resultRoutes = require('./routes/resultRoutes');
 
 const app = express();
 
+// Middleware - Order matters!
+app.use(morgan('dev')); // Logging
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
+app.use('/api/', limiter);
 
-// Mount Routes
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API Routes (v1 prefix is optional but recommended)
 app.use('/api/standings', standingRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/events', eventRoutes);
@@ -24,14 +39,15 @@ app.use('/api/tracks', trackRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/results', resultRoutes);
 
-app.use((err, req, res, next) => {
-  console.error("!!! BACKEND CRASH !!!");
-  console.error(err.stack); // This prints the exact line number in your terminal
-  res.status(500).json({ 
-    error: "Internal Server Error", 
-    message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : {} 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.method} ${req.path} not found`
   });
 });
+
+// Centralized error handler (MUST be last)
+app.use(errorHandler);
 
 module.exports = app;

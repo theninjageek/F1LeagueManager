@@ -1,24 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const standingService = require('../services/standingService');
+const { sendSuccess, sendError } = require('../middleware/responseHandler');
 
 // DRIVER STANDINGS
-router.get('/drivers', async (req, res) => {
+router.get('/drivers', async (req, res, next) => {
   try {
     const standings = await standingService.getDriverStandings();
-    res.json(standings);
+    sendSuccess(res, standings);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-// CONSTRUCTOR STANDINGS (Add this now)
-router.get('/constructors', async (req, res) => {
+// CONSTRUCTOR STANDINGS
+router.get('/constructors', async (req, res, next) => {
   try {
     const standings = await standingService.getConstructorStandings();
-    res.json(standings);
+    sendSuccess(res, standings);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

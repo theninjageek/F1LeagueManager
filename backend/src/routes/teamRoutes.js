@@ -1,38 +1,37 @@
 const express = require('express');
 const router = express.Router();
 const teamService = require('../services/teamService');
+const { sendSuccess } = require('../middleware/responseHandler');
+const { validateRequired, validateIntParam } = require('../middleware/validateRequest');
 
-router.get('/', async (req, res) => {
+// GET all teams
+router.get('/', async (req, res, next) => {
   try {
     const teams = await teamService.getAllTeams();
-    res.json(teams);
+    sendSuccess(res, teams);
   } catch (err) {
-    res.status(500).json({ error: "Paddock Error: Failed to retrieve constructors." });
+    next(err);
   }
 });
 
-router.post('/', async (req, res) => {
+// POST create team
+router.post('/', validateRequired(['name']), async (req, res, next) => {
   try {
     const newTeam = await teamService.createTeam(req.body);
-    res.status(201).json(newTeam);
+    sendSuccess(res, newTeam, 201, 'Team created successfully');
   } catch (err) {
-    res.status(500).json({ error: "Scrutineering Error: Could not register team." });
+    next(err);
   }
 });
 
-router.delete('/:id', async (req, res) => {
+// DELETE team
+router.delete('/:id', validateIntParam('id'), async (req, res, next) => {
   try {
-    const deletedTeam = await teamService.deleteTeam(req.params.id);
-    res.json({ message: "Constructor removed successfully", team: deletedTeam });
+    const { id } = req.params;
+    const deleted = await teamService.deleteTeam(id);
+    sendSuccess(res, deleted, 200, 'Team removed successfully');
   } catch (err) {
-    // Check for PostgreSQL error code 23503 (Foreign Key Violation)
-    if (err.code === '23503') {
-      return res.status(400).json({ 
-        error: "Cannot delete team: Drivers are still assigned to this constructor. Move them to Free Agency first." 
-      });
-    }
-    
-    res.status(500).json({ error: err.message || "Failed to delete team." });
+    next(err);
   }
 });
 
