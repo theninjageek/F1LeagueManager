@@ -17,7 +17,7 @@ export const useCreateDriver = () => {
   return useMutation({
     mutationFn: (driverData) => apiClient.post('/drivers', driverData),
     onSuccess: () => {
-      queryClient.invalidateQueries(['drivers']);
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
     }
   });
 };
@@ -28,7 +28,7 @@ export const useTransferDriver = () => {
     mutationFn: ({ driverId, teamId }) => 
       apiClient.put(`/drivers/${driverId}/transfer`, { teamId }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['drivers']);
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
     }
   });
 };
@@ -38,7 +38,7 @@ export const useDeleteDriver = () => {
   return useMutation({
     mutationFn: (driverId) => apiClient.delete(`/drivers/${driverId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['drivers']);
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
     }
   });
 };
@@ -59,7 +59,7 @@ export const useCreateTeam = () => {
   return useMutation({
     mutationFn: (teamData) => apiClient.post('/teams', teamData),
     onSuccess: () => {
-      queryClient.invalidateQueries(['teams']);
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
     }
   });
 };
@@ -101,7 +101,7 @@ export const useCreateSeason = () => {
   return useMutation({
     mutationFn: (seasonData) => apiClient.post('/seasons', seasonData),
     onSuccess: () => {
-      queryClient.invalidateQueries(['seasons']);
+      queryClient.invalidateQueries({ queryKey: ['seasons'] });
     }
   });
 };
@@ -123,7 +123,7 @@ export const useAddEvent = () => {
     mutationFn: ({ seasonId, eventData }) => 
       apiClient.post(`/seasons/${seasonId}/events`, eventData),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['seasonEvents', variables.seasonId]);
+      queryClient.invalidateQueries({ queryKey: ['seasonEvents', variables.seasonId] });
     }
   });
 };
@@ -134,7 +134,7 @@ export const useUpdateEvent = () => {
     mutationFn: ({ eventId, updates }) => 
       apiClient.patch(`/seasons/events/${eventId}`, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries(['seasonEvents']);
+      queryClient.invalidateQueries({ queryKey: ['seasonEvents'] });
     }
   });
 };
@@ -144,7 +144,7 @@ export const useDeleteEvent = () => {
   return useMutation({
     mutationFn: (eventId) => apiClient.delete(`/seasons/events/${eventId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['seasonEvents']);
+      queryClient.invalidateQueries({ queryKey: ['seasonEvents'] });
     }
   });
 };
@@ -177,8 +177,8 @@ export const useFinalizeResults = () => {
   return useMutation({
     mutationFn: (resultsPayload) => apiClient.post('/events/finalize', resultsPayload),
     onSuccess: () => {
-      queryClient.invalidateQueries(['calendar']);
-      queryClient.invalidateQueries(['startingGrid']);
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['startingGrid'] });
     }
   });
 };

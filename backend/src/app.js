@@ -3,7 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan'); // Add logging
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
-const { limiter } = require('./middleware/rateLimiter');
+const { limiter, strictLimiter } = require('./middleware/rateLimiter');
 
 // Routes
 const standingRoutes = require('./routes/standingRoutes');
@@ -19,9 +19,18 @@ const app = express();
 
 // Middleware - Order matters!
 app.use(morgan('dev')); // Logging
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+}));
 app.use(express.json());
 app.use(requestLogger);
+
+app.use('/api/events/finalize', strictLimiter);
+app.use('/api/seasons', strictLimiter);
+app.use('/api/teams', strictLimiter);
 app.use('/api/', limiter);
 
 // Health check endpoint

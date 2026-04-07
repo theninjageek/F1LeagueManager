@@ -4,3 +4,6 @@ Grandstand1.png
 Granstand2.png
 PaddockIdea.png
 Requirements.md
+backend/.env
+frontend/.env.local
+frontend/.env

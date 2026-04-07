@@ -12,6 +12,9 @@ const finalizeResults = async (eventId, sessionType, results) => {
        WHERE e.id = $1`, [eventId]
     );
     
+    if (!seasonQuery.rows || seasonQuery.rows.length === 0) {
+      throw new AppError('Event or season not found', 404);
+    }
     const { points_matrix, fl_point_enabled } = seasonQuery.rows[0];
     const sessionKey = sessionType.toLowerCase();
 

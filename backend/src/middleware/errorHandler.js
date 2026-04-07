@@ -13,7 +13,6 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({
       success: false,
       message: dbError.message,
-      code: dbError.code,
       ...(process.env.NODE_ENV === 'development' && { originalError: err.message })
     });
   }
@@ -23,7 +22,7 @@ const errorHandler = (err, req, res, next) => {
   return res.status(errorResponse.status).json({
     success: false,
     message: errorResponse.message,
-    ...(errorResponse.stack && { stack: errorResponse.stack })
+    ...(process.env.NODE_ENV === 'development' && { stack: errorResponse.stack })
   });
 };
 
