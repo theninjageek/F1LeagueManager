@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { useCalendarForPaddock, useStartingGrid, useFinalizeResults, useDrivers } from '../../hooks/usePaddock';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { SESSION_TYPES } from '../../constants';
 
 const SESSIONS = [
   { id: 'QUALIFYING', label: 'Qualifying' },
@@ -11,17 +10,20 @@ const SESSIONS = [
   { id: 'GRAND_PRIX', label: 'Grand Prix' }
 ];
 
+const POINTS_MATRIX = {
+  GRAND_PRIX: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+  SPRINT_RACE: [8, 7, 6, 5, 4, 3, 2, 1]
+};
+
 const formatInterval = (val) => {
   if (!val) return '';
-  if (typeof val === 'string') return val; // Already a string
+  if (typeof val === 'string') return val;
   
-  // If it's a Postgres Interval Object
   const h = val.hours || 0;
   const m = val.minutes || 0;
   const s = val.seconds || 0;
   const ms = val.milliseconds || 0;
 
-  // Format as HH:MM:SS.ms (adjust based on your preference)
   const parts = [];
   if (h > 0) parts.push(h.toString().padStart(2, '0'));
   parts.push(m.toString().padStart(2, '0'));
@@ -35,119 +37,91 @@ const formatInterval = (val) => {
 export const RaceControl = () => {
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [classification, setClassification] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeSession, setActiveSession] = useState('QUALIFYING');
-  const [calendar, setCalendar] = useState([]);
+  const [isPublishing, setIsPublishing] = useState(false);
 
-  const getPointsPreview = (index, driver) => {
-    let points = 0;
-    if (activeSession === 'GRAND_PRIX') {
-      const raceMatrix = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
-      points = raceMatrix[index] || 0;
-      if (driver.fastest_lap && index < 10 && !driver.is_dnf) points += 1;
-    } else if (activeSession === 'SPRINT_RACE') {
-      const sprintMatrix = [8, 7, 6, 5, 4, 3, 2, 1];
-      points = sprintMatrix[index] || 0;
+  const { data: calendar = [], isLoading: calendarLoading } = useCalendarForPaddock();
+  const { data: allDrivers = [], isLoading: driversLoading } = useDrivers();
+  const { data: gridData, isLoading: gridLoading } = useStartingGrid(activeEvent, activeSession);
+  const finalizeResultsMutation = useFinalizeResults();
+
+  // Initialize active event on first load
+  React.useEffect(() => {
+    if (calendar.length > 0 && !activeEvent) {
+      const nextRace = calendar.find(e => !e.is_completed);
+      if (nextRace) {
+        setActiveEvent(nextRace.id);
+      }
     }
-    return points;
-  };
+  }, [calendar, activeEvent]);
+
+  // Hydrate session data when activeEvent or activeSession changes
+  React.useEffect(() => {
+    if (!activeEvent || gridLoading) return;
+
+    const hydrateSession = async () => {
+      try {
+        if (!gridData) return;
+
+        // gridData is now { type: 'EXISTING' | 'AUTO_GRID' | 'EMPTY', data: [...], gridSourceSession?: '...' }
+        const results = gridData.data || [];
+
+        if (results.length > 0) {
+          // Populate classification with existing results
+          setClassification(
+            results.map((d, idx) => ({
+              ...d,
+              position: d.position || idx + 1,
+              is_dnf: d.is_dnf || false,
+              fastest_lap: d.fastest_lap || false,
+              best_lap_time: formatInterval(d.best_lap_time),
+              total_race_time: formatInterval(d.total_race_time),
+              grid_position: d.grid_position || null,
+              points_awarded: d.points_awarded || 0
+            }))
+          );
+
+          // Get ranked driver IDs
+          const rankedIds = results.map(d => d.id);
+          
+          // Filter out already ranked drivers from available list
+          const unrankedDrivers = filterAssignedDrivers(allDrivers).filter(
+            d => !rankedIds.includes(d.id)
+          );
+          
+          setAvailableDrivers(unrankedDrivers);
+        } else {
+          // No results found, start with empty classification
+          setClassification([]);
+          setAvailableDrivers(filterAssignedDrivers(allDrivers));
+        }
+      } catch (err) {
+        console.error('Hydration error:', err);
+        setClassification([]);
+        setAvailableDrivers(filterAssignedDrivers(allDrivers));
+      }
+    };
+
+    hydrateSession();
+  }, [activeEvent, activeSession, gridData, allDrivers]);
 
   const filterAssignedDrivers = (drivers) => {
     return drivers.filter(d => d.team_id || d.current_team_id);
   };
 
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        const [driversRes, calendarRes] = await Promise.all([
-          axios.get(`${API_URL}/drivers`),
-          axios.get(`${API_URL}/calendar`)
-        ]);
-        setCalendar(calendarRes.data);
-        const nextRace = calendarRes.data.find(e => !e.is_completed);
-        if (nextRace) setActiveEvent(nextRace.id);
-        setLoading(false);
-      } catch (err) {
-        console.error("Init failed", err);
-        setLoading(false);
+  const getPointsPreview = (index, driver) => {
+    let points = 0;
+    const matrix = POINTS_MATRIX[activeSession];
+    
+    if (matrix) {
+      points = matrix[index] || 0;
+      if (activeSession === 'GRAND_PRIX' && driver.fastest_lap && index < 10 && !driver.is_dnf) {
+        points += 1;
       }
-    };
-    initData();
-  }, []);
-
-  useEffect(() => {
-    const hydrateSession = async () => {
-      if (!activeEvent) return;
-
-      try {
-        const res = await axios.get(`${API_URL}/events/${activeEvent}/starting-grid?session=${activeSession}`);
-        const allDriversRes = await axios.get(`${API_URL}/drivers`);
-        const allDrivers = filterAssignedDrivers(allDriversRes.data);
-
-        if (res.data?.data?.length > 0) {
-          setClassification(res.data.data.map(d => ({ 
-            ...d, 
-            is_dnf: d.is_dnf || false, 
-            fastest_lap: d.fastest_lap || false,
-            best_lap_time: formatInterval(d.best_lap_time),
-            total_race_time: formatInterval(d.total_race_time),
-            grid_position: d.grid_position || null
-          })));
-          const rankedIds = res.data.data.map(d => d.id || d.driver_id);
-          setAvailableDrivers(allDrivers.filter(d => !rankedIds.includes(d.id)));
-        } 
-        else {
-          let fallbackSession = 'QUALIFYING';
-          if (activeSession === 'SPRINT_RACE') {
-            fallbackSession = 'SPRINT_QUALIFYING';
-          } 
-
-          const fallbackRes = await axios.get(`${API_URL}/events/${activeEvent}/starting-grid?session=${fallbackSession}`);
-          
-          if (fallbackRes.data?.data?.length > 0) {
-            setClassification(fallbackRes.data.data.map((d, idx) => ({ 
-              ...d, 
-              is_dnf: false, 
-              fastest_lap: false,
-              grid_position: idx + 1, // Set grid position from fallback order
-              best_lap_time: '',
-              total_race_time: ''
-            })));
-            const rankedIds = fallbackRes.data.data.map(d => d.id || d.driver_id);
-            setAvailableDrivers(allDrivers.filter(d => !rankedIds.includes(d.id)));
-          } else if (activeSession === 'SPRINT_RACE') {
-            const finalFallback = await axios.get(`${API_URL}/events/${activeEvent}/starting-grid?session=QUALIFYING`);
-            if (finalFallback.data?.data?.length > 0) {
-              setClassification(finalFallback.data.data.map((d, idx) => ({ 
-                ...d, 
-                is_dnf: false, 
-                fastest_lap: false,
-                grid_position: idx + 1,
-                best_lap_time: '',
-                total_race_time: ''
-              })));
-              const rankedIds = finalFallback.data.data.map(d => d.id || d.driver_id);
-              setAvailableDrivers(allDrivers.filter(d => !rankedIds.includes(d.id)));
-            } else {
-              resetGrid(allDrivers);
-            }
-          } else {
-            resetGrid(allDrivers);
-          }
-        }
-      } catch (err) {
-        console.error("Hydration Error:", err);
-      }
-    };
-
-    const resetGrid = (allDrivers) => {
-      setClassification([]);
-      setAvailableDrivers(allDrivers);
-    };
-
-    hydrateSession();
-  }, [activeSession, activeEvent]);
+    }
+    return points;
+  };
 
   const onDragEnd = (result) => {
     if (!result.destination) return;
@@ -171,8 +145,10 @@ export const RaceControl = () => {
 
   const unrankDriver = (driverId) => {
     const driver = classification.find(d => d.id === driverId);
-    setAvailableDrivers([...availableDrivers, driver]);
-    setClassification(classification.filter(d => d.id !== driverId));
+    if (driver) {
+      setAvailableDrivers([...availableDrivers, driver]);
+      setClassification(classification.filter(d => d.id !== driverId));
+    }
   };
 
   const updateField = (index, field, value) => {
@@ -184,20 +160,29 @@ export const RaceControl = () => {
   const toggleStatus = (index, field) => {
     const updated = [...classification];
     updated[index][field] = !updated[index][field];
+    
+    // If marking DNF, remove fastest lap
     if (field === 'is_dnf' && updated[index].is_dnf) {
       updated[index].fastest_lap = false;
     }
+    
     setClassification(updated);
   };
 
   const handleFinalize = async () => {
-    if (!activeEvent) return;
-    const sessionLabel = SESSIONS.find(s => s.id === activeSession).label;
+    if (!activeEvent || classification.length === 0) {
+      alert('No results to publish');
+      return;
+    }
+
+    const sessionLabel = SESSIONS.find(s => s.id === activeSession)?.label;
     if (!window.confirm(`Publish ${sessionLabel} results?`)) return;
+
+    setIsPublishing(true);
     try {
       const payload = {
         eventId: activeEvent,
-        sessionType: activeSession, 
+        sessionType: activeSession,
         results: classification.map((d, index) => ({
           driver_id: d.id,
           team_id: d.team_id || d.current_team_id,
@@ -209,16 +194,36 @@ export const RaceControl = () => {
           fastest_lap: d.fastest_lap
         }))
       };
-      await axios.post(`${API_URL}/events/finalize`, payload);
-      alert("Results Published.");
-      if (activeSession === 'GRAND_PRIX') window.location.href = '/paddock';
-    } catch (err) { alert("Error saving."); }
-  };
 
-  if (loading) return <div className="p-8 text-white font-black italic uppercase">Scanning Paddock...</div>;
+      await finalizeResultsMutation.mutateAsync(payload);
+      alert('Results published successfully!');
+      
+      // Redirect to paddock if it was the main race
+      if (activeSession === 'GRAND_PRIX') {
+        setTimeout(() => window.location.href = '/paddock', 500);
+      } else {
+        // Reset for next session
+        setClassification([]);
+        setAvailableDrivers(filterAssignedDrivers(allDrivers));
+      }
+    } catch (err) {
+      alert('Error publishing results: ' + err.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   const currentEvent = calendar.find(e => e.id == activeEvent);
   const isSprintWeekend = currentEvent?.has_sprint === true || currentEvent?.has_sprint === 1;
+  const isLoading = calendarLoading || driversLoading || gridLoading;
+
+  if (isLoading) {
+    return (
+      <div className="p-8 text-white font-black italic uppercase">
+        Scanning Paddock...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-4 text-white">
@@ -227,83 +232,170 @@ export const RaceControl = () => {
           <h2 className="text-5xl font-black italic uppercase tracking-tighter">Race Control</h2>
           <p className="text-zinc-500 text-[10px] uppercase tracking-[0.3em] font-bold mt-2">Session Logistics</p>
         </div>
+
         <div className="flex gap-4">
-          <select value={activeEvent || ""} onChange={(e) => setActiveEvent(e.target.value)} className="bg-zinc-950 border border-zinc-800 p-3 text-xs font-bold uppercase outline-none">
+          <select 
+            value={activeEvent || ""} 
+            onChange={(e) => setActiveEvent(parseInt(e.target.value))}
+            className="bg-zinc-950 border border-zinc-800 p-3 text-xs font-bold uppercase outline-none text-white cursor-pointer"
+          >
+            <option value="">Select Event...</option>
             {calendar.map(event => (
-              <option key={event.id} value={event.id}>R{event.round_number}: {event.track_name}</option>
+              <option key={event.id} value={event.id}>
+                R{event.round_number}: {event.track_name}
+              </option>
             ))}
           </select>
-          <select value={activeSession} onChange={(e) => setActiveSession(e.target.value)} className="bg-zinc-950 border border-zinc-800 p-3 text-f1-red text-xs font-bold uppercase outline-none">
+
+          <select 
+            value={activeSession} 
+            onChange={(e) => setActiveSession(e.target.value)}
+            className="bg-zinc-950 border border-zinc-800 p-3 text-f1-red text-xs font-bold uppercase outline-none cursor-pointer"
+          >
             {SESSIONS.map(s => {
               if (s.id.includes('SPRINT') && !isSprintWeekend) return null;
-              return <option key={s.id} value={s.id}>{s.label}</option>;
+              return (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              );
             })}
           </select>
         </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* ENTRY LIST */}
         <div className="bg-[#0c0c0c] p-6 border border-zinc-900">
           <h3 className="text-[10px] font-black uppercase text-zinc-500 mb-6 tracking-widest border-b border-zinc-900 pb-2 flex justify-between">
             <span>Entry List</span>
-            <span>{availableDrivers.length} Left</span>
+            <span>{availableDrivers.length} Available</span>
           </h3>
+          
           <div className="grid grid-cols-2 gap-2">
             {availableDrivers.map(driver => (
-              <button key={driver.id} onClick={() => rankDriver(driver)} className="bg-zinc-900 border-l-4 p-3 text-left border-zinc-800 hover:bg-zinc-800 transition-all" style={{ borderLeftColor: driver.color_hex }}>
-                <p className="text-[8px] text-zinc-500 uppercase font-bold truncate">{driver.team_name}</p>
-                <p className="font-black uppercase text-[11px] truncate">{driver.name}</p>
+              <button 
+                key={driver.id} 
+                onClick={() => rankDriver(driver)}
+                className="bg-zinc-900 border-l-4 p-3 text-left border-zinc-800 hover:bg-zinc-800 transition-all text-white"
+                style={{ borderLeftColor: driver.color_hex || '#27272a' }}
+              >
+                <p className="text-[8px] text-zinc-500 uppercase font-bold truncate">
+                  {driver.team_name || 'Free Agent'}
+                </p>
+                <p className="font-black uppercase text-[11px] truncate">
+                  {driver.name}
+                </p>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-[#0c0c0c] p-6 border border-zinc-900 shadow-2xl relative min-h-[500px]">
-          <h3 className="text-[10px] font-black uppercase text-f1-red mb-6 tracking-widest border-b border-zinc-900 pb-2">Classification</h3>
+        {/* CLASSIFICATION */}
+        <div className="bg-[#0c0c0c] p-6 border border-zinc-900 shadow-2xl relative min-h-[500px] flex flex-col">
+          <h3 className="text-[10px] font-black uppercase text-f1-red mb-6 tracking-widest border-b border-zinc-900 pb-2">
+            Classification ({classification.length})
+          </h3>
+
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="classification">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-1">
-                  {classification.map((d, i) => (
-                    <Draggable key={d.id.toString()} draggableId={d.id.toString()} index={i}>
+              {(provided, snapshot) => (
+                <div 
+                  {...provided.droppableProps} 
+                  ref={provided.innerRef}
+                  className={`space-y-1 flex-grow overflow-y-auto ${snapshot.isDraggingOver ? 'bg-zinc-900/20' : ''}`}
+                >
+                  {classification.map((driver, index) => (
+                    <Draggable 
+                      key={driver.id.toString()} 
+                      draggableId={driver.id.toString()} 
+                      index={index}
+                    >
                       {(provided, snapshot) => (
-                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} 
-                             className={`flex items-center bg-zinc-900/50 border border-zinc-800 h-14 pr-4 transition-all ${snapshot.isDragging ? 'z-50 bg-zinc-800 border-f1-red scale-[1.01]' : ''}`}>
-                          <div className="bg-zinc-800 w-10 h-full flex items-center justify-center font-black italic text-xs text-zinc-500">P{i + 1}</div>
-                          <div className="w-1 h-full mx-3" style={{ backgroundColor: d.color_hex }} />
-                          
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`flex items-center bg-zinc-900/50 border border-zinc-800 h-14 pr-4 transition-all ${
+                            snapshot.isDragging 
+                              ? 'z-50 bg-zinc-800 border-f1-red scale-[1.01]' 
+                              : ''
+                          }`}
+                        >
+                          {/* Position */}
+                          <div className="bg-zinc-800 w-10 h-full flex items-center justify-center font-black italic text-xs text-zinc-500">
+                            P{index + 1}
+                          </div>
+
+                          {/* Team Color */}
+                          <div 
+                            className="w-1 h-full mx-3" 
+                            style={{ backgroundColor: driver.color_hex || '#27272a' }} 
+                          />
+
+                          {/* Driver Info & Times */}
                           <div className="flex-grow min-w-0">
                             <div className="font-bold uppercase text-[11px] truncate flex items-center gap-2">
-                              {d.name} 
-                              {getPointsPreview(i, d) > 0 && <span className="text-zinc-600 text-[9px] font-normal italic">+{getPointsPreview(i, d)}</span>}
+                              {driver.name}
+                              {getPointsPreview(index, driver) > 0 && (
+                                <span className="text-zinc-600 text-[9px] font-normal italic">
+                                  +{getPointsPreview(index, driver)}
+                                </span>
+                              )}
                             </div>
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               placeholder={activeSession.includes('QUALIFYING') ? "QUALI TIME" : "BEST LAP"}
-                              value={d.best_lap_time || ''}
-                              onChange={(e) => updateField(i, 'best_lap_time', e.target.value)}
+                              value={driver.best_lap_time || ''}
+                              onChange={(e) => updateField(index, 'best_lap_time', e.target.value)}
                               className="bg-transparent text-[9px] text-zinc-500 outline-none w-full uppercase placeholder:text-zinc-800"
                             />
                           </div>
 
+                          {/* Race Time (for race sessions) */}
                           {(activeSession === 'GRAND_PRIX' || activeSession === 'SPRINT_RACE') && (
-                            <input 
-                              type="text" 
-                              placeholder={i === 0 ? "TOTAL TIME" : "+ GAP"}
-                              value={d.total_race_time || ''}
-                              onChange={(e) => updateField(i, 'total_race_time', e.target.value)}
+                            <input
+                              type="text"
+                              placeholder={index === 0 ? "TOTAL TIME" : "+ GAP"}
+                              value={driver.total_race_time || ''}
+                              onChange={(e) => updateField(index, 'total_race_time', e.target.value)}
                               className="bg-zinc-950 border border-zinc-800 text-[10px] px-2 py-1 w-20 mx-2 text-right font-mono text-zinc-400 focus:border-f1-red outline-none"
                             />
                           )}
 
+                          {/* Status Buttons */}
                           <div className="flex items-center gap-1">
                             {(activeSession === 'GRAND_PRIX' || activeSession === 'SPRINT_RACE') && (
-                              <button onClick={() => toggleStatus(i, 'fastest_lap')} 
-                                      className={`w-7 h-7 text-[8px] font-black border transition-all ${d.fastest_lap ? 'bg-purple-600 border-purple-600 text-white' : 'text-zinc-700 border-zinc-800 hover:text-white'}`}>FL</button>
+                              <button
+                                onClick={() => toggleStatus(index, 'fastest_lap')}
+                                className={`w-7 h-7 text-[8px] font-black border transition-all ${
+                                  driver.fastest_lap 
+                                    ? 'bg-purple-600 border-purple-600 text-white' 
+                                    : 'text-zinc-700 border-zinc-800 hover:text-white'
+                                }`}
+                                title="Fastest Lap"
+                              >
+                                FL
+                              </button>
                             )}
-                            <button onClick={() => toggleStatus(i, 'is_dnf')} 
-                                    className={`w-8 h-7 text-[8px] font-black border transition-all ${d.is_dnf ? 'bg-zinc-700 border-zinc-700 text-white' : 'text-zinc-700 border-zinc-800 hover:text-red-500'}`}>DNF</button>
-                            <button onClick={() => unrankDriver(d.id)} className="ml-1 text-zinc-800 hover:text-white p-1">✕</button>
+                            <button
+                              onClick={() => toggleStatus(index, 'is_dnf')}
+                              className={`w-8 h-7 text-[8px] font-black border transition-all ${
+                                driver.is_dnf 
+                                  ? 'bg-zinc-700 border-zinc-700 text-white' 
+                                  : 'text-zinc-700 border-zinc-800 hover:text-white'
+                              }`}
+                              title="Did Not Finish"
+                            >
+                              DNF
+                            </button>
+                            <button
+                              onClick={() => unrankDriver(driver.id)}
+                              className="ml-1 text-zinc-800 hover:text-white p-1"
+                              title="Remove from classification"
+                            >
+                              ✕
+                            </button>
                           </div>
                         </div>
                       )}
@@ -315,10 +407,15 @@ export const RaceControl = () => {
             </Droppable>
           </DragDropContext>
 
+          {/* Publish Button */}
           {classification.length > 0 && (
             <div className="mt-8 pt-6 border-t border-zinc-900">
-              <button onClick={handleFinalize} className="w-full bg-white text-black py-4 font-black italic uppercase hover:bg-f1-red hover:text-white transition-all tracking-tighter">
-                Publish {activeSession.replace('_', ' ')}
+              <button
+                onClick={handleFinalize}
+                disabled={isPublishing}
+                className="w-full bg-white text-black py-4 font-black italic uppercase hover:bg-f1-red hover:text-white transition-all tracking-tighter disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPublishing ? 'Publishing...' : `Publish ${activeSession.replace('_', ' ')}`}
               </button>
             </div>
           )}

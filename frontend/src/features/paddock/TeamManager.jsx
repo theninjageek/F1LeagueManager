@@ -1,10 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { PlusIcon, TrashIcon, ShieldIcon } from '../../components/Icons';
+import React, { useState } from 'react';
+import { useTeams, useCreateTeam, useDeleteTeam } from '../../hooks/usePaddock';
+import { PlusIcon, ShieldIcon } from '../../components/Icons';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-// List of files you have in /public/logos/
 const AVAILABLE_LOGOS = [
   { label: 'None / Custom', value: '' },
   { label: 'Red Bull', value: '/logos/redbull.svg' },
@@ -20,29 +17,29 @@ const AVAILABLE_LOGOS = [
 ];
 
 export const TeamManager = () => {
-  const [teams, setTeams] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newTeam, setNewTeam] = useState({ name: '', color_hex: '#e10600', team_icon_url: '' });
-
-  const fetchTeams = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/teams`);
-      const sorted = Array.isArray(res.data) ? res.data.sort((a, b) => a.name.localeCompare(b.name)) : [];
-      setTeams(sorted);
-    } catch (err) { console.error("Sync failed"); }
-  };
-
-  useEffect(() => { fetchTeams(); }, []);
+  const { data: teams = [], isLoading } = useTeams();
+  const createMutation = useCreateTeam();
+  const deleteMutation = useDeleteTeam();
+  
+  const [newTeam, setNewTeam] = useState({ 
+    name: '', 
+    color_hex: '#e10600', 
+    team_icon_url: '' 
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_URL}/teams`, newTeam);
-      fetchTeams();
+      await createMutation.mutateAsync(newTeam);
       setShowModal(false);
       setNewTeam({ name: '', color_hex: '#e10600', team_icon_url: '' });
-    } catch (err) { alert("Registration Failed"); }
+    } catch (err) {
+      alert("Registration Failed: " + err.message);
+    }
   };
+
+  if (isLoading) return <div className="p-8 text-white">Loading teams...</div>;
 
   return (
     <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
@@ -103,7 +100,6 @@ export const TeamManager = () => {
             </div>
             
             <div className="space-y-6">
-              {/* Name Input */}
               <div>
                 <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block tracking-[0.2em]">Full Team Identity</label>
                 <input 
@@ -115,7 +111,6 @@ export const TeamManager = () => {
                 />
               </div>
               
-              {/* Color Picker */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block tracking-[0.2em]">Livery Color</label>
@@ -130,7 +125,6 @@ export const TeamManager = () => {
                   </div>
                 </div>
 
-                {/* Logo Select */}
                 <div>
                   <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block tracking-[0.2em]">Asset Selection</label>
                   <select 
@@ -145,17 +139,6 @@ export const TeamManager = () => {
                 </div>
               </div>
 
-              {/* Manual URL Fallback (Just in case) */}
-              <div>
-                <label className="text-[10px] font-black uppercase text-zinc-500 mb-2 block tracking-[0.2em]">Custom Asset Path (Optional)</label>
-                <input 
-                  placeholder="/logos/custom.svg" 
-                  className="w-full bg-black border border-zinc-800 p-4 text-zinc-600 font-mono text-[10px] outline-none focus:border-f1-red" 
-                  value={newTeam.team_icon_url} 
-                  onChange={(e) => setNewTeam({...newTeam, team_icon_url: e.target.value})} 
-                />
-              </div>
-
               <div className="flex gap-4 pt-6">
                 <button 
                   type="button" 
@@ -166,9 +149,10 @@ export const TeamManager = () => {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-grow py-4 text-[10px] font-black uppercase bg-white text-black hover:bg-f1-red hover:text-white transition-all"
+                  disabled={createMutation.isPending}
+                  className="flex-grow py-4 text-[10px] font-black uppercase bg-white text-black hover:bg-f1-red hover:text-white transition-all disabled:opacity-50"
                 >
-                  Confirm Entry
+                  {createMutation.isPending ? 'Registering...' : 'Confirm Entry'}
                 </button>
               </div>
             </div>

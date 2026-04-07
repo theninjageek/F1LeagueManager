@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Import Link for navigation
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useCalendar } from '../../hooks';
 
 export const RaceCalendar = () => {
-  const [events, setEvents] = useState([]);
+  const { data: events = [], isLoading } = useCalendar();
 
-  useEffect(() => {
-    axios.get(`${API_URL}/calendar`)
-      .then(res => setEvents(res.data))
-      .catch(err => {
-        console.error("CALENDAR API ERROR:", err.response?.data || err.message);
-      });
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        <p className="text-zinc-500">Loading calendar...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -23,9 +21,6 @@ export const RaceCalendar = () => {
       
       <div className="space-y-4">
         {events.map((event) => (
-          /* Change: Use Link instead of div. 
-             If completed, point to results page; otherwise, use '#' or a disabled style.
-          */
           <Link 
             key={event.id} 
             to={event.is_completed ? `/results/${event.id}` : '#'}
@@ -43,13 +38,13 @@ export const RaceCalendar = () => {
               </p>
             </div>
 
-            {/* NEW: Track Thumbnail */}
+            {/* Track Thumbnail */}
             <div className="w-20 h-12 ml-4 flex items-center justify-center bg-zinc-900/50 rounded p-1 border border-zinc-800/50">
               <img 
                 src={`/assets/tracks/${event.track_id}.avif`} 
                 alt={event.track_name}
                 className="max-h-full max-w-full object-contain opacity-40 group-hover:opacity-100 transition-opacity grayscale invert"
-                onError={(e) => e.target.style.display = 'none'} // Hide if image missing
+                onError={(e) => e.target.style.display = 'none'}
               />
             </div>
 
@@ -77,12 +72,12 @@ export const RaceCalendar = () => {
             <div className="pr-4">
               {event.is_completed ? (
                 <div className="flex flex-col items-end">
-                   <span className="text-zinc-600 font-black italic text-sm group-hover:text-white transition-colors">
-                     COMPLETE
-                   </span>
-                   <span className="text-[10px] text-f1-red font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                     RESULTS →
-                   </span>
+                  <span className="text-zinc-600 font-black italic text-sm group-hover:text-white transition-colors">
+                    COMPLETE
+                  </span>
+                  <span className="text-[10px] text-f1-red font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                    RESULTS →
+                  </span>
                 </div>
               ) : (
                 <span className="text-f1-red font-black italic text-sm animate-pulse">

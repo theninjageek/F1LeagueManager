@@ -1,13 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { useApi } from './useApi';
 
+/**
+ * Fetch driver or constructor standings
+ * @param {string} type - 'drivers' or 'constructors'
+ */
 export const useStandings = (type = 'drivers') => {
-  return useQuery({
-    queryKey: ['standings', type], // Key changes when type changes -> triggers refetch
-    queryFn: async () => {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/standings/${type}`);
-      return data;
-    },
-    refetchInterval: 30000,
-  });
+  return useApi(
+    ['standings', type],
+    `/standings/${type}`,
+    {
+      refetchInterval: 30000, // Refetch every 30 seconds
+      staleTime: 30000
+    }
+  );
 };

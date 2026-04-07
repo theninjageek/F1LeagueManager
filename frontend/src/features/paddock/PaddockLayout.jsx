@@ -34,7 +34,9 @@ export const PaddockLayout = ({ children }) => {
           >
             <svg 
               className={`w-4 h-4 transform transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} 
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
             </svg>
@@ -68,7 +70,7 @@ export const PaddockLayout = ({ children }) => {
 
                 {/* Tooltip for Collapsed State */}
                 {isCollapsed && (
-                  <div className="absolute left-full ml-4 px-3 py-1 bg-zinc-900 border border-zinc-700 text-[10px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 whitespace-nowrap shadow-2xl">
+                  <div className="absolute left-full ml-4 px-3 py-1 bg-zinc-900 border border-zinc-700 text-[10px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     {item.name}
                   </div>
                 )}

@@ -35,8 +35,8 @@ export const PaddockDashboard = () => {
       <header className="mb-12">
         <h1 className="text-5xl font-black italic uppercase tracking-tighter text-white">Paddock Control</h1>
         <div className="flex items-center gap-2 mt-2">
-           <span className="w-2 h-2 bg-f1-red rounded-full animate-pulse shadow-[0_0_8px_#ff1801]" />
-           <p className="text-zinc-500 uppercase text-[10px] font-bold tracking-[0.3em]">Admin Session Active</p>
+          <span className="w-2 h-2 bg-f1-red rounded-full animate-pulse shadow-[0_0_8px_#ff1801]" />
+          <p className="text-zinc-500 uppercase text-[10px] font-bold tracking-[0.3em]">Admin Session Active</p>
         </div>
       </header>
 

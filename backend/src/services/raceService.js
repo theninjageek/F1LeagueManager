@@ -82,37 +82,71 @@ const finalizeResults = async (eventId, sessionType, results) => {
 };
 
 const getStartingGrid = async (eventId, sessionType) => {
-  // 1. Check for existing results
+  // Normalize sessionType to uppercase
+  const normalizedSessionType = sessionType.toUpperCase();
+
+  // 1. Check for existing results for this specific session
   const existingResults = await db.pool.query(
-    `SELECT d.id, d.name, t.name as team_name, t.color_hex, d.current_team_id as team_id, 
-            r.position, r.grid_position, r.is_dnf, r.fastest_lap, r.total_race_time, r.best_lap_time
+    `SELECT 
+       d.id, 
+       d.name, 
+       t.name as team_name, 
+       t.color_hex, 
+       d.current_team_id as team_id, 
+       r.position, 
+       r.grid_position, 
+       r.is_dnf, 
+       r.fastest_lap, 
+       r.total_race_time, 
+       r.best_lap_time,
+       r.points_awarded
      FROM session_results r
      JOIN drivers d ON r.driver_id = d.id
      JOIN teams t ON r.team_id = t.id
      WHERE r.event_id = $1 AND r.session_type = $2
      ORDER BY r.position ASC`,
-    [eventId, sessionType]
+    [eventId, normalizedSessionType]
   );
 
   if (existingResults.rows.length > 0) {
-    return { type: 'EXISTING', data: existingResults.rows };
+    return {
+      type: 'EXISTING',
+      data: existingResults.rows.map(row => ({
+        ...row,
+        id: row.id // Ensure id is available
+      }))
+    };
   }
 
-  // 2. Logic to find the "Parent" session for the grid
+  // 2. If no existing results, find parent session to use as grid
   let parentSession = null;
-  const eventCheck = await db.pool.query('SELECT has_sprint FROM events WHERE id = $1', [eventId]);
+  const eventCheck = await db.pool.query(
+    'SELECT has_sprint FROM events WHERE id = $1',
+    [eventId]
+  );
   const hasSprint = eventCheck.rows[0]?.has_sprint;
 
-  if (sessionType === 'GRAND_PRIX') {
+  // Determine parent session based on current session type
+  if (normalizedSessionType === 'GRAND_PRIX') {
     parentSession = hasSprint ? 'SPRINT_RACE' : 'QUALIFYING';
-  } else if (sessionType === 'SPRINT_RACE') {
+  } else if (normalizedSessionType === 'SPRINT_RACE') {
     parentSession = 'SPRINT_QUALIFYING';
+  } else if (normalizedSessionType === 'QUALIFYING') {
+    // Qualifying has no parent
+    parentSession = null;
   }
 
+  // 3. Try to get parent session results
   if (parentSession) {
-    const grid = await db.pool.query(
-      `SELECT d.id, d.name, t.name as team_name, t.color_hex, d.current_team_id as team_id,
-              r.position as grid_position
+    const parentResults = await db.pool.query(
+      `SELECT 
+         d.id, 
+         d.name, 
+         t.name as team_name, 
+         t.color_hex, 
+         d.current_team_id as team_id,
+         r.position as grid_position,
+         r.is_dnf
        FROM session_results r
        JOIN drivers d ON r.driver_id = d.id
        JOIN teams t ON r.team_id = t.id
@@ -120,10 +154,29 @@ const getStartingGrid = async (eventId, sessionType) => {
        ORDER BY r.position ASC`,
       [eventId, parentSession]
     );
-    return { type: 'AUTO', data: grid.rows };
+
+    if (parentResults.rows.length > 0) {
+      return {
+        type: 'AUTO_GRID',
+        gridSourceSession: parentSession,
+        data: parentResults.rows.map((row, idx) => ({
+          ...row,
+          position: idx + 1, // Starting from P1
+          best_lap_time: null,
+          total_race_time: null,
+          is_dnf: false,
+          fastest_lap: false,
+          points_awarded: 0
+        }))
+      };
+    }
   }
 
-  return { type: 'NONE', data: [] };
+  // 4. No results found anywhere
+  return {
+    type: 'EMPTY',
+    data: []
+  };
 };
 
 module.exports = { finalizeResults, getStartingGrid };
