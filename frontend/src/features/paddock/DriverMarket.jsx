@@ -216,7 +216,7 @@ export const DriverMarket = () => {
                 <input 
                   required 
                   placeholder="E.G. LEWIS HAMILTON" 
-                  className="w-full bg-black border border-zinc-800 p-4 text-white font-bold outline-none focus:border-f1-red uppercase italic" 
+                  className="w-full bg-black border border-zinc-800 p-4 text-white font-bold outline-none focus:border-f1-red italic" 
                   value={newDriver.name}
                   onChange={(e) => setNewDriver({...newDriver, name: e.target.value})}
                 />
@@ -226,7 +226,6 @@ export const DriverMarket = () => {
                 <div className="space-y-1">
                   <label className="text-[9px] font-black uppercase text-zinc-600 tracking-widest ml-1">Race No.</label>
                   <input 
-                    required 
                     placeholder="44" 
                     className="w-full bg-black border border-zinc-800 p-4 text-white font-bold outline-none text-center" 
                     value={newDriver.race_number}
@@ -236,7 +235,6 @@ export const DriverMarket = () => {
                 <div className="space-y-1">
                   <label className="text-[9px] font-black uppercase text-zinc-600 tracking-widest ml-1">Origin</label>
                   <input 
-                    required 
                     placeholder="GBR" 
                     className="w-full bg-black border border-zinc-800 p-4 text-white font-bold outline-none uppercase text-center" 
                     value={newDriver.country_code}

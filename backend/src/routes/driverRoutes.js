@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST create driver - PROTECTED
-router.post('/', requireAuth, validateRequired(['name', 'current_team_id']), async (req, res, next) => {
+router.post('/', requireAuth, validateRequired(['name']), async (req, res, next) => {
   try {
     const newDriver = await driverService.createDriver(req.body);
     sendSuccess(res, newDriver, 201, 'Driver created successfully');
@@ -26,7 +26,7 @@ router.post('/', requireAuth, validateRequired(['name', 'current_team_id']), asy
 });
 
 // PUT transfer driver - PROTECTED
-router.put('/:id/transfer', requireAuth, validateIntParam('id'), validateRequired(['teamId']), async (req, res, next) => {
+router.put('/:id/transfer', requireAuth, validateIntParam('id'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { teamId } = req.body;

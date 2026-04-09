@@ -12,17 +12,17 @@ const getAllDrivers = async () => {
 };
 
 const createDriver = async ({ name, race_number, current_team_id, is_ai, country_code }) => {
-  // Validate team exists
-  await resourceExists('teams', current_team_id);
+  // // Validate team exists
+  // await resourceExists('teams', current_team_id);
 
-  // Check if driver with same race number exists
-  const existing = await query(
-    `SELECT id FROM drivers WHERE race_number = $1`,
-    [race_number]
-  );
-  if (existing.length > 0) {
-    throw new AppError(`Driver with race number ${race_number} already exists`, 400);
-  }
+  // // Check if driver with same race number exists
+  // const existing = await query(
+  //   `SELECT id FROM drivers WHERE race_number = $1`,
+  //   [race_number]
+  // );
+  // if (existing.length > 0) {
+  //   throw new AppError(`Driver with race number ${race_number} already exists`, 400);
+  // }
 
   return await queryOne(`
     INSERT INTO drivers (name, race_number, current_team_id, is_ai, country_code)
