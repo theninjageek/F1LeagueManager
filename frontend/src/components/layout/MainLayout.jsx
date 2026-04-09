@@ -107,7 +107,7 @@ export const MainLayout = ({ children }) => {
                               />
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold leading-none mb-1">RND {race.round_number}</p>
+                              <p className="text-[10px] font-bold leading-none mb-1">RND {race.round_number} - {new Date(race.weekend_start).toLocaleDateString('en-GB', {day: '2-digit', month: 'short'})} </p>
                               <p className="text-xs font-black uppercase italic text-zinc-300 group-hover:text-white">{race.track_name}</p>
                             </div>
                           </Link>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSeasons, useSeasonEvents, useCreateSeason, useAddEvent, useUpdateEvent, useDeleteEvent, useTracks } from '../../hooks/usePaddock';
-import { useTeams } from '../../hooks/usePaddock';
-import { useCalendarForPaddock } from '../../hooks/usePaddock';
+import { useSeasons, useSeasonEvents, useCreateSeason, useAddEvent, useUpdateEvent, useDeleteEvent, useTracks, useUpdateSeason } from '../../hooks/usePaddock';
+
 
 export const SeasonManager = () => {
   const [selectedSeason, setSelectedSeason] = useState(null);
@@ -16,6 +15,7 @@ export const SeasonManager = () => {
   const { data: events = [], isLoading: eventsLoading } = useSeasonEvents(selectedSeason?.id);
 
   const createSeasonMutation = useCreateSeason();
+  const updateSeasonMutation = useUpdateSeason();
   const addEventMutation = useAddEvent();
   const updateEventMutation = useUpdateEvent();
   const deleteEventMutation = useDeleteEvent();
@@ -262,7 +262,7 @@ export const SeasonManager = () => {
         <PointsPanel
           season={selectedSeason}
           onClose={() => setIsPointsOpen(false)}
-          onUpdate={createSeasonMutation}
+          onUpdate={updateSeasonMutation}
         />
       )}
     </div>
@@ -565,6 +565,17 @@ const PointsPanel = ({ season, onClose, onUpdate }) => {
     sprint: season?.points_matrix?.sprint || [8, 7, 6, 5, 4, 3, 2, 1],
     fastest_lap: season?.points_matrix?.fastest_lap ?? 1
   });
+
+  // Sync matrix when season data updates from API
+  useEffect(() => {
+    if (season?.points_matrix) {
+      setMatrix({
+        race: season.points_matrix.race || [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+        sprint: season.points_matrix.sprint || [8, 7, 6, 5, 4, 3, 2, 1],
+        fastest_lap: season.points_matrix.fastest_lap ?? 1
+      });
+    }
+  }, [season?.points_matrix]);
 
   const addPosition = (type) => {
     setMatrix({

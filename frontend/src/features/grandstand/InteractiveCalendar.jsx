@@ -3,7 +3,7 @@ import React from 'react';
 export const InteractiveCalendar = ({ events }) => {
   return (
     <div className="bg-zinc-900/50 p-6 border border-zinc-800 rounded-lg">
-      <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-zinc-500">Interactive Calendar</h3>
+      <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-6 text-zinc-500">Calendar</h3>
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
         {events.map((event, index) => (
           <React.Fragment key={event.id}>

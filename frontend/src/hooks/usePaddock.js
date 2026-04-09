@@ -112,7 +112,7 @@ export const useUpdateSeason = () => {
     mutationFn: ({ seasonId, updates }) => 
       apiClient.put(`/seasons/${seasonId}`, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries(['seasons']);
+      queryClient.invalidateQueries({ queryKey: ['seasons'] });
     }
   });
 };

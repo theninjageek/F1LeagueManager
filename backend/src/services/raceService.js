@@ -18,28 +18,34 @@ const finalizeResults = async (eventId, sessionType, results) => {
     const { points_matrix, fl_point_enabled } = seasonQuery.rows[0];
     const sessionKey = sessionType.toLowerCase();
 
+    // Ensure points_matrix is parsed (in case it's a string)
+    const matrix = typeof points_matrix === 'string' ? JSON.parse(points_matrix) : points_matrix;
+
     // Mapping session type to points matrix keys
     let matrixKey = sessionKey;
     if (sessionKey === 'sprint_race') matrixKey = 'sprint';
     else if (sessionKey === 'grand_prix') matrixKey = 'race';
 
-    let matrix = points_matrix[matrixKey];
+    let pointsArray = matrix[matrixKey];
 
     // Fallback logic if matrix key isn't found
-    if (!matrix) {
+    if (!pointsArray) {
       if (sessionKey.includes('qualifying')) {
-        matrix = []; 
+        pointsArray = []; 
       } else {
-        matrix = points_matrix['race'] || points_matrix['grand_prix'] || [];
+        pointsArray = matrix['race'] || matrix['grand_prix'] || [];
       }
     }
 
+    // Get fastest lap bonus value (default to 1)
+    const fastestLapBonus = matrix.fastest_lap || 1;
+
     for (const res of results) {
       // 1. Calculate Points
-      let points = matrix[res.position - 1] || 0;
+      let points = pointsArray[res.position - 1] || 0;
       const isGP = sessionKey === 'grand_prix';
       if (res.fastest_lap && fl_point_enabled && isGP && !res.is_dnf && res.position <= 10) {
-        points += 1;
+        points += fastestLapBonus;
       }
 
       // 2. Sanitize Times (Empty strings to NULL)

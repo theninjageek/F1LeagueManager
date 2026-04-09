@@ -5,6 +5,16 @@ import { useCalendar } from '../../hooks';
 export const RaceCalendar = () => {
   const { data: events = [], isLoading } = useCalendar();
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto py-8 px-4">
@@ -57,6 +67,11 @@ export const RaceCalendar = () => {
                     Reverse
                   </span>
                 )}
+                {event.has_sprint && (
+                  <span className="bg-red-500 text-black text-[10px] font-black px-2 py-0.5 rounded-sm italic uppercase">
+                    Sprint
+                  </span>
+                )}
                 {event.is_street_circuit && (
                   <span className="border border-zinc-700 text-zinc-400 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-tighter">
                     Street
@@ -64,7 +79,7 @@ export const RaceCalendar = () => {
                 )}
               </div>
               <p className="text-zinc-500 text-xs uppercase tracking-widest mt-1">
-                {event.is_completed ? 'View Race Classification' : 'Next Session: Live Soon'}
+                Session Date: {formatDate(event.weekend_start)}
               </p>
             </div>
 

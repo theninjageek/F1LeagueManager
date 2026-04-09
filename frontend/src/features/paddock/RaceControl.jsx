@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useCalendarForPaddock, useStartingGrid, useFinalizeResults, useDrivers } from '../../hooks/usePaddock';
+import { useCalendarForPaddock, useStartingGrid, useFinalizeResults, useDrivers, useSeasons } from '../../hooks/usePaddock';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { SESSION_TYPES } from '../../constants';
 
 const SESSIONS = [
   { id: 'QUALIFYING', label: 'Qualifying' },
@@ -9,11 +8,6 @@ const SESSIONS = [
   { id: 'SPRINT_RACE', label: 'Sprint Race' },
   { id: 'GRAND_PRIX', label: 'Grand Prix' }
 ];
-
-const POINTS_MATRIX = {
-  GRAND_PRIX: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
-  SPRINT_RACE: [8, 7, 6, 5, 4, 3, 2, 1]
-};
 
 const formatInterval = (val) => {
   if (!val) return '';
@@ -43,8 +37,17 @@ export const RaceControl = () => {
 
   const { data: calendar = [], isLoading: calendarLoading } = useCalendarForPaddock();
   const { data: allDrivers = [], isLoading: driversLoading } = useDrivers();
+  const { data: seasons = [] } = useSeasons();
   const { data: gridData, isLoading: gridLoading } = useStartingGrid(activeEvent, activeSession);
   const finalizeResultsMutation = useFinalizeResults();
+
+  // Get dynamic points matrix from active season
+  const activeSeason = seasons.find(s => s.is_active) || seasons[0];
+  const pointsMatrix = activeSeason?.points_matrix || {
+    race: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+    sprint: [8, 7, 6, 5, 4, 3, 2, 1],
+    fastest_lap: 1
+  };
 
   // Initialize active event on first load
   React.useEffect(() => {
@@ -112,12 +115,12 @@ export const RaceControl = () => {
 
   const getPointsPreview = (index, driver) => {
     let points = 0;
-    const matrix = POINTS_MATRIX[activeSession];
+    const matrix = activeSession === 'GRAND_PRIX' ? pointsMatrix.race : pointsMatrix.sprint;
     
     if (matrix) {
       points = matrix[index] || 0;
       if (activeSession === 'GRAND_PRIX' && driver.fastest_lap && index < 10 && !driver.is_dnf) {
-        points += 1;
+        points += pointsMatrix.fastest_lap || 1;
       }
     }
     return points;
