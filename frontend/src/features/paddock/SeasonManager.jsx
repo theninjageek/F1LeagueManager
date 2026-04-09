@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSeasons, useSeasonEvents, useCreateSeason, useAddEvent, useUpdateEvent, useDeleteEvent } from '../../hooks/usePaddock';
+import { useSeasons, useSeasonEvents, useCreateSeason, useAddEvent, useUpdateEvent, useDeleteEvent, useTracks } from '../../hooks/usePaddock';
 import { useTeams } from '../../hooks/usePaddock';
 import { useCalendarForPaddock } from '../../hooks/usePaddock';
 
@@ -12,7 +12,7 @@ export const SeasonManager = () => {
   const [newSeasonName, setNewSeasonName] = useState("");
 
   const { data: seasons = [], isLoading: seasonsLoading } = useSeasons();
-  const { data: tracks = [], isLoading: tracksLoading } = useCalendarForPaddock();
+  // const { data: tracks = [], isLoading: tracksLoading } = useCalendarForPaddock();
   const { data: events = [], isLoading: eventsLoading } = useSeasonEvents(selectedSeason?.id);
 
   const createSeasonMutation = useCreateSeason();
@@ -418,7 +418,7 @@ const AddWeekendPanel = ({ seasonId, onClose, onAddEvent }) => {
     setForm(prev => ({ ...prev, round_number: nextRound }));
   }, [allEvents]);
 
-  const { data: tracks = [] } = useCalendarForPaddock();
+  const { data: tracks = [] } = useTracks();
 
   const handleSubmit = async () => {
     if (!form.track_id) {

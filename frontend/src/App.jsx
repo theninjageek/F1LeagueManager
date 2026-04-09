@@ -1,7 +1,9 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Layouts
 import { MainLayout } from './components/layout/MainLayout';
@@ -11,6 +13,7 @@ import { PaddockLayout } from './features/paddock/PaddockLayout';
 import { Grandstand } from './pages/Grandstand';
 import { RaceCalendar } from './features/calendar/RaceCalendar';
 import { EventResults } from './features/calendar/EventResults';
+import { UserManagement } from './pages/UserManagement';
 
 // Paddock Views
 import { PaddockDashboard } from './features/paddock/PaddockDashboard';
@@ -32,29 +35,37 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
-        <BrowserRouter>
-          <MainLayout>
+        <AuthProvider>
+          <BrowserRouter>
             <Routes>
-              {/* PUBLIC ROUTES */}
-              <Route path="/" element={<Grandstand />} />
-              <Route path="/calendar" element={<RaceCalendar />} />
-              <Route path="/results/:eventId" element={<EventResults />} />
+              {/* Public Routes with MainLayout */}
+              <Route path="/" element={<MainLayout><Grandstand /></MainLayout>} />
+              <Route path="/calendar" element={<MainLayout><RaceCalendar /></MainLayout>} />
+              <Route path="/results/:eventId" element={<MainLayout><EventResults /></MainLayout>} />
 
-              {/* ADMIN PADDOCK (Nested Routes) */}
+              {/* Protected Admin Paddock Routes */}
               <Route path="/paddock/*" element={
-                <PaddockLayout>
-                  <Routes>
-                    <Route index element={<PaddockDashboard />} />
-                    <Route path="race-control" element={<RaceControl />} />
-                    <Route path="drivers" element={<DriverMarket />} />
-                    <Route path="seasons" element={<SeasonManager />} />
-                    <Route path="teams" element={<TeamManager />} />
-                  </Routes>
-                </PaddockLayout>
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PaddockLayout>
+                      <Routes>
+                        <Route index element={<PaddockDashboard />} />
+                        <Route path="race-control" element={<RaceControl />} />
+                        <Route path="drivers" element={<DriverMarket />} />
+                        <Route path="seasons" element={<SeasonManager />} />
+                        <Route path="teams" element={<TeamManager />} />
+                        <Route path="users" element={<UserManagement />} />
+                      </Routes>
+                    </PaddockLayout>
+                  </MainLayout>
+                </ProtectedRoute>
               } />
+
+              {/* Catch all - redirect to home */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </MainLayout>
-        </BrowserRouter>
+          </BrowserRouter>
+        </AuthProvider>
       </ErrorBoundary>
     </QueryClientProvider>
   );

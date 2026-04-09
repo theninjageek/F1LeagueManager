@@ -1,12 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStandings, useCalendar } from '../../hooks';
+import { useAuth } from '../../contexts/AuthContext';
+import { LoginModal } from '../LoginModal';
 import apiClient from '../../lib/apiClient';
 
 export const MainLayout = ({ children }) => {
   const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
   const [activeSeason, setActiveSeason] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const timeoutRef = useRef(null);
 
   // Fetch active season
@@ -127,16 +131,25 @@ export const MainLayout = ({ children }) => {
 
             <div className="w-px h-4 bg-zinc-800 mx-2 hidden md:block" />
             
-            <Link 
-              to="/paddock" 
-              className={`text-[10px] font-black uppercase tracking-[0.2em] border border-zinc-800 px-3 py-1.5 rounded transition-all ${
-                location.pathname.startsWith('/paddock') 
-                  ? 'border-f1-red text-f1-red' 
-                  : 'text-zinc-400 hover:border-f1-red hover:text-white'
-              }`}
-            >
-              Admin Paddock
-            </Link>
+            {isAuthenticated ? (
+              <Link 
+                to="/paddock" 
+                className={`text-[10px] font-black uppercase tracking-[0.2em] border border-zinc-800 px-3 py-1.5 rounded transition-all ${
+                  location.pathname.startsWith('/paddock') 
+                    ? 'border-f1-red text-f1-red' 
+                    : 'text-zinc-400 hover:border-f1-red hover:text-white'
+                }`}
+              >
+                Admin Paddock
+              </Link>
+            ) : (
+              <button 
+                onClick={() => setShowLoginModal(true)}
+                className="text-[10px] font-black uppercase tracking-[0.2em] border border-zinc-800 px-3 py-1.5 rounded transition-all text-zinc-400 hover:border-f1-red hover:text-white"
+              >
+                Admin Paddock
+              </button>
+            )}
           </nav>
         </div>
       </header>
@@ -144,6 +157,9 @@ export const MainLayout = ({ children }) => {
       <main className="min-h-[calc(100vh-160px)]">
         {children}
       </main>
+
+      {/* Login Modal */}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   );
 };

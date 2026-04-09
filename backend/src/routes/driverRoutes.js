@@ -3,8 +3,9 @@ const router = express.Router();
 const driverService = require('../services/driverService');
 const { sendSuccess } = require('../middleware/responseHandler');
 const { validateRequired, validateIntParam } = require('../middleware/validateRequest');
+const { requireAuth } = require('../middleware/authMiddleware');
 
-// GET all drivers
+// GET all drivers - PUBLIC
 router.get('/', async (req, res, next) => {
   try {
     const drivers = await driverService.getAllDrivers();
@@ -14,8 +15,8 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// POST create driver
-router.post('/', validateRequired(['name', 'current_team_id']), async (req, res, next) => {
+// POST create driver - PROTECTED
+router.post('/', requireAuth, validateRequired(['name', 'current_team_id']), async (req, res, next) => {
   try {
     const newDriver = await driverService.createDriver(req.body);
     sendSuccess(res, newDriver, 201, 'Driver created successfully');
@@ -24,8 +25,8 @@ router.post('/', validateRequired(['name', 'current_team_id']), async (req, res,
   }
 });
 
-// PUT transfer driver
-router.put('/:id/transfer', validateIntParam('id'), validateRequired(['teamId']), async (req, res, next) => {
+// PUT transfer driver - PROTECTED
+router.put('/:id/transfer', requireAuth, validateIntParam('id'), validateRequired(['teamId']), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { teamId } = req.body;
@@ -36,8 +37,8 @@ router.put('/:id/transfer', validateIntParam('id'), validateRequired(['teamId'])
   }
 });
 
-// DELETE driver
-router.delete('/:id', validateIntParam('id'), async (req, res, next) => {
+// DELETE driver - PROTECTED
+router.delete('/:id', requireAuth, validateIntParam('id'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const deleted = await driverService.deleteDriver(id);
