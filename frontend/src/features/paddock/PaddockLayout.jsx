@@ -142,13 +142,13 @@ export const PaddockLayout = ({ children }) => {
 
         {!isCollapsed && (
           <div className="p-6 border-t border-zinc-900/50 text-[9px] uppercase text-zinc-800 font-black tracking-widest italic animate-in fade-in">
-            v3.0.2-Stable
+            v3.1
           </div>
         )}
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-grow bg-[#0c0c0c] p-12 overflow-y-auto">
+      <main className="flex-grow bg-[#0c0c0c] p-5 overflow-y-auto">
         {children}
       </main>
     </div>

@@ -274,6 +274,11 @@ export const SeasonManager = () => {
 const EngineerPanel = ({ event, onClose, onUpdate, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [localEvent, setLocalEvent] = useState(event);
+    useEffect(() => {
+      setLocalEvent(event);
+    }, [event]);
+
   const handleUpdate = async (updates) => {
     try {
       await onUpdate.mutateAsync({ eventId: event.id, updates });
@@ -298,7 +303,7 @@ const EngineerPanel = ({ event, onClose, onUpdate, onDelete }) => {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[#0c0c0c] border-l border-f1-red h-full p-10 animate-slide-in shadow-2xl overflow-y-auto">
+      <div className="relative w-full max-w-md bg-[#0c0c0c] border-l border-f1-red h-full p-10 pt-24 animate-slide-in shadow-2xl overflow-y-auto">
         <header className="flex justify-between items-start mb-12">
           <div>
             <span className="text-[10px] font-black text-f1-red uppercase tracking-[0.3em]">Engineer Tuning</span>
@@ -317,7 +322,7 @@ const EngineerPanel = ({ event, onClose, onUpdate, onDelete }) => {
                 type="date"
                 defaultValue={event.weekend_start?.split('T')[0]}
                 onChange={(e) => handleUpdate({ weekend_start: e.target.value })}
-                className="bg-black border border-zinc-800 p-3 text-xs font-bold outline-none focus:border-f1-red text-white"
+                className="bg-zinc-900 border border-zinc-700 p-3 text-xs font-bold outline-none focus:border-f1-red focus:border-2 text-white cursor-pointer"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -326,7 +331,7 @@ const EngineerPanel = ({ event, onClose, onUpdate, onDelete }) => {
                 type="date"
                 defaultValue={event.weekend_end?.split('T')[0]}
                 onChange={(e) => handleUpdate({ weekend_end: e.target.value })}
-                className="bg-black border border-zinc-800 p-3 text-xs font-bold outline-none focus:border-f1-red text-white"
+                className="bg-zinc-900 border border-zinc-700 p-3 text-xs font-bold outline-none focus:border-f1-red focus:border-2 text-white cursor-pointer"
               />
             </div>
           </section>
@@ -335,17 +340,25 @@ const EngineerPanel = ({ event, onClose, onUpdate, onDelete }) => {
             <h4 className="text-[10px] font-black text-zinc-500 uppercase italic">Weekend Flags</h4>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => handleUpdate({ has_sprint: !event.has_sprint })}
+                onClick={() => {
+                  const newVal = !localEvent.has_sprint;
+                  setLocalEvent({ ...localEvent, has_sprint: newVal });
+                  handleUpdate({ has_sprint: newVal });
+                }}
                 className={`p-4 border text-[10px] font-black italic uppercase transition-all ${
-                  event.has_sprint ? 'bg-f1-red text-white border-f1-red' : 'border-zinc-800 text-zinc-500 hover:text-white'
+                  localEvent.has_sprint ? 'bg-f1-red text-white border-f1-red' : 'border-zinc-800 text-zinc-500 hover:text-white'
                 }`}
               >
                 Sprint
               </button>
               <button
-                onClick={() => handleUpdate({ is_reverse: !event.is_reverse })}
+                onClick={() => {
+                  const newVal = !localEvent.is_reverse;
+                  setLocalEvent({ ...localEvent, is_reverse: newVal });
+                  handleUpdate({ is_reverse: newVal });
+                }}
                 className={`p-4 border text-[10px] font-black italic uppercase transition-all ${
-                  event.is_reverse ? 'bg-yellow-500 text-black border-yellow-500' : 'border-zinc-800 text-zinc-500 hover:text-white'
+                  localEvent.is_reverse ? 'bg-yellow-500 text-black border-yellow-500' : 'border-zinc-800 text-zinc-500 hover:text-white'
                 }`}
               >
                 Reverse
@@ -359,9 +372,13 @@ const EngineerPanel = ({ event, onClose, onUpdate, onDelete }) => {
               {['1.0', '1.5', '2.0'].map(m => (
                 <button
                   key={m}
-                  onClick={() => handleUpdate({ points_multiplier: m })}
+                  onClick={() => {
+                    const newVal = m;
+                    setLocalEvent({ ...localEvent, points_multiplier: newVal });
+                    handleUpdate({ points_multiplier: newVal });
+                  }}
                   className={`flex-grow p-3 text-xs font-black border transition-all ${
-                    parseFloat(event.points_multiplier || 1) === parseFloat(m)
+                    parseFloat(localEvent.points_multiplier || 1) === parseFloat(m)
                       ? 'bg-white text-black border-white'
                       : 'border-zinc-800 text-zinc-500 hover:text-white'
                   }`}
@@ -440,7 +457,7 @@ const AddWeekendPanel = ({ seasonId, onClose, onAddEvent }) => {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[#0c0c0c] border-l border-white h-full p-10 animate-slide-in shadow-2xl overflow-y-auto">
+      <div className="relative w-full max-w-md bg-[#0c0c0c] border-l border-white h-full p-10 pt-24 animate-slide-in shadow-2xl overflow-y-auto">
         <h2 className="text-3xl font-black italic uppercase mb-10 tracking-tighter">Add Race Weekend</h2>
         
         <div className="space-y-6">
@@ -492,7 +509,7 @@ const AddWeekendPanel = ({ seasonId, onClose, onAddEvent }) => {
                 type="date"
                 value={form.weekend_start}
                 onChange={e => setForm({...form, weekend_start: e.target.value})}
-                className="w-full bg-black border border-zinc-800 p-4 text-xs font-bold outline-none focus:border-f1-red text-white"
+                className="w-full bg-zinc-900 border border-zinc-700 p-4 text-xs font-bold outline-none focus:border-f1-red focus:border-2 text-white cursor-pointer"
               />
             </div>
             <div>
@@ -501,7 +518,7 @@ const AddWeekendPanel = ({ seasonId, onClose, onAddEvent }) => {
                 type="date"
                 value={form.weekend_end}
                 onChange={e => setForm({...form, weekend_end: e.target.value})}
-                className="w-full bg-black border border-zinc-800 p-4 text-xs font-bold outline-none focus:border-f1-red text-white"
+                className="w-full bg-zinc-900 border border-zinc-700 p-4 text-xs font-bold outline-none focus:border-f1-red focus:border-2 text-white cursor-pointer"
               />
             </div>
           </div>
@@ -584,7 +601,7 @@ const PointsPanel = ({ season, onClose, onUpdate }) => {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-[#0c0c0c] border-l border-white h-full p-10 overflow-y-auto animate-slide-in">
+      <div className="relative w-full max-w-lg bg-[#0c0c0c] border-l border-white h-full p-10 pt-24 overflow-y-auto animate-slide-in">
         <h2 className="text-3xl font-black italic uppercase mb-2 tracking-tighter">Scoring Logic</h2>
         <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-10 italic">
           Rewards structure for {season?.name}
