@@ -149,6 +149,16 @@ export const useDeleteEvent = () => {
   });
 };
 
+export const useTracks = () => {
+  return useQuery({
+    queryKey: ['tracks'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/tracks');
+      return data;
+    }
+  })
+};
+
 // Calendar & Results
 export const useCalendarForPaddock = () => {
   return useQuery({

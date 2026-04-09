@@ -1,11 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan'); // Add logging
+const cookieParser = require('cookie-parser');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const { limiter, strictLimiter } = require('./middleware/rateLimiter');
 
 // Routes
+const authRoutes = require('./routes/authRoutes');
 const standingRoutes = require('./routes/standingRoutes');
 const driverRoutes = require('./routes/driverRoutes');
 const eventRoutes = require('./routes/eventRoutes');
@@ -26,12 +28,13 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
 app.use(express.json());
+app.use(cookieParser());
 app.use(requestLogger);
 
-app.use('/api/events/finalize', strictLimiter);
-app.use('/api/seasons', strictLimiter);
-app.use('/api/teams', strictLimiter);
-app.use('/api/', limiter);
+// app.use('/api/events/finalize', strictLimiter);
+// app.use('/api/seasons', limiter);
+// app.use('/api/teams', limiter);
+// app.use('/api/', limiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -39,6 +42,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes (v1 prefix is optional but recommended)
+app.use('/api/auth', authRoutes);
 app.use('/api/standings', standingRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/events', eventRoutes);

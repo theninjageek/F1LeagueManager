@@ -4,9 +4,10 @@ const raceService = require('../services/raceService');
 const { sendSuccess, sendError } = require('../middleware/responseHandler');
 const { validateRequired, validateIntParam } = require('../middleware/validateRequest');
 const { AppError } = require('../utils/errorHandler');
+const { requireAuth } = require('../middleware/authMiddleware');
 
-// POST /api/events/finalize
-router.post('/finalize', validateRequired(['eventId', 'sessionType', 'results']), async (req, res, next) => {
+// POST /api/events/finalize - PROTECTED
+router.post('/finalize', requireAuth, validateRequired(['eventId', 'sessionType', 'results']), async (req, res, next) => {
   try {
     const { eventId, sessionType, results } = req.body;
 

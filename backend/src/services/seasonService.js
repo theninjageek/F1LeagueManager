@@ -65,11 +65,6 @@ const addEventToSeason = async (seasonId, eventData) => {
     throw new AppError(`Round ${round_number} already exists in this season`, 400);
   }
 
-  // Validate dates
-  if (new Date(weekend_start) >= new Date(weekend_end)) {
-    throw new AppError('weekend_start must be before weekend_end', 400);
-  }
-
   return await queryOne(`
     INSERT INTO events (
       season_id, 

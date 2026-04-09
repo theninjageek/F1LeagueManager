@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { HomeIcon, FlagIcon, UsersIcon, GearIcon, ShieldIcon } from '../../components/Icons';
+import { useAuth } from '../../contexts/AuthContext';
+import { LogOut, User, Settings } from 'lucide-react';
 
 export const PaddockLayout = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const menu = [
     { name: 'Dashboard', path: '/paddock', icon: <HomeIcon /> },
@@ -13,6 +18,11 @@ export const PaddockLayout = ({ children }) => {
     { name: 'Constructors', path: '/paddock/teams', icon: <ShieldIcon /> },
     { name: 'Season Management', path: '/paddock/seasons', icon: <GearIcon /> },
   ];
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
@@ -78,6 +88,57 @@ export const PaddockLayout = ({ children }) => {
             );
           })}
         </nav>
+
+        {/* User Menu */}
+        <div className="border-t border-zinc-900/50 p-2">
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-900/30 transition-colors
+                ${isCollapsed ? 'justify-center' : ''}`}
+            >
+              <div className="w-8 h-8 rounded-full bg-f1-red/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-f1-red" />
+              </div>
+              {!isCollapsed && (
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-white truncate">{user?.username}</p>
+                  <p className="text-xs text-zinc-500">Admin</p>
+                </div>
+              )}
+            </button>
+
+            {/* User Dropdown */}
+            {showUserMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowUserMenu(false)}
+                />
+                <div className={`absolute bottom-full mb-2 ${isCollapsed ? 'left-full ml-2' : 'left-0 right-0'} bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 overflow-hidden`}>
+                  <Link
+                    to="/paddock/users"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-sm"
+                  >
+                    <Settings className="w-4 h-4 text-zinc-400" />
+                    <span className="text-white">User Management</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-sm border-t border-zinc-800"
+                  >
+                    <LogOut className="w-4 h-4 text-red-400" />
+                    <span className="text-red-400">Logout</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
         {!isCollapsed && (
           <div className="p-6 border-t border-zinc-900/50 text-[9px] uppercase text-zinc-800 font-black tracking-widest italic animate-in fade-in">
