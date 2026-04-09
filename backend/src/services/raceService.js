@@ -44,7 +44,14 @@ const finalizeResults = async (eventId, sessionType, results) => {
       // 1. Calculate Points
       let points = pointsArray[res.position - 1] || 0;
       const isGP = sessionKey === 'grand_prix';
-      if (res.fastest_lap && fl_point_enabled && isGP && !res.is_dnf && res.position <= 10) {
+      
+      // Apply DNF logic: zero points unless keep_points_on_dnf is true
+      if (res.is_dnf && !res.keep_points_on_dnf) {
+        points = 0;
+      }
+      
+      // Fastest lap bonus (only if not DNF or if keeping points on DNF)
+      if (res.fastest_lap && fl_point_enabled && isGP && (res.position <= 10 && (!res.is_dnf || res.keep_points_on_dnf))) {
         points += fastestLapBonus;
       }
 

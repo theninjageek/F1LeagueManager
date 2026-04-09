@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCalendarForPaddock, useStartingGrid, useFinalizeResults, useDrivers, useSeasons } from '../../hooks/usePaddock';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { SESSION_TYPES } from '../../constants';
 
 const SESSIONS = [
   { id: 'QUALIFYING', label: 'Qualifying' },
@@ -34,6 +35,7 @@ export const RaceControl = () => {
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeSession, setActiveSession] = useState('QUALIFYING');
   const [isPublishing, setIsPublishing] = useState(false);
+  const [keepPointsOnDNF, setKeepPointsOnDNF] = useState(new Set()); // Track which drivers keep points despite DNF
 
   const { data: calendar = [], isLoading: calendarLoading } = useCalendarForPaddock();
   const { data: allDrivers = [], isLoading: driversLoading } = useDrivers();
@@ -118,9 +120,13 @@ export const RaceControl = () => {
     const matrix = activeSession === 'GRAND_PRIX' ? pointsMatrix.race : pointsMatrix.sprint;
     
     if (matrix) {
-      points = matrix[index] || 0;
-      if (activeSession === 'GRAND_PRIX' && driver.fastest_lap && index < 10 && !driver.is_dnf) {
-        points += pointsMatrix.fastest_lap || 1;
+      // Award points unless DNF and not overridden
+      const shouldAwardPoints = !driver.is_dnf || keepPointsOnDNF.has(driver.id);
+      if (shouldAwardPoints) {
+        points = matrix[index] || 0;
+        if (activeSession === 'GRAND_PRIX' && driver.fastest_lap && index < 10 && !driver.is_dnf) {
+          points += pointsMatrix.fastest_lap || 1;
+        }
       }
     }
     return points;
@@ -172,6 +178,16 @@ export const RaceControl = () => {
     setClassification(updated);
   };
 
+  const toggleKeepPointsOnDNF = (driverId) => {
+    const newSet = new Set(keepPointsOnDNF);
+    if (newSet.has(driverId)) {
+      newSet.delete(driverId);
+    } else {
+      newSet.add(driverId);
+    }
+    setKeepPointsOnDNF(newSet);
+  };
+
   const handleFinalize = async () => {
     if (!activeEvent || classification.length === 0) {
       alert('No results to publish');
@@ -194,7 +210,8 @@ export const RaceControl = () => {
           best_lap_time: d.best_lap_time?.trim() || null,
           total_race_time: d.total_race_time?.trim() || null,
           is_dnf: d.is_dnf,
-          fastest_lap: d.fastest_lap
+          fastest_lap: d.fastest_lap,
+          keep_points_on_dnf: keepPointsOnDNF.has(d.id) // Include flag for points calculation
         }))
       };
 
@@ -392,6 +409,19 @@ export const RaceControl = () => {
                             >
                               DNF
                             </button>
+                            {driver.is_dnf && (
+                              <button
+                                onClick={() => toggleKeepPointsOnDNF(driver.id)}
+                                className={`w-8 h-7 text-[8px] font-black border transition-all ${
+                                  keepPointsOnDNF.has(driver.id) 
+                                    ? 'bg-green-600 border-green-600 text-white' 
+                                    : 'text-zinc-700 border-zinc-800 hover:text-white'
+                                }`}
+                                title="Keep points despite DNF"
+                              >
+                                +P
+                              </button>
+                            )}
                             <button
                               onClick={() => unrankDriver(driver.id)}
                               className="ml-1 text-zinc-800 hover:text-white p-1"

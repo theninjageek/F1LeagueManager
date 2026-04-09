@@ -65,8 +65,8 @@ CREATE TABLE session_results (
     fastest_lap BOOLEAN DEFAULT false,
     points_awarded INT DEFAULT 0,
     grid_position INT, -- Useful for showing "Positions Gained" in the UI
-    total_race_time INTERVAL,     -- Full race time
-    best_lap_time INTERVAL      -- best lap time for this driver
+    total_race_time character varying(50),     -- Full race time
+    best_lap_time character varying(50)      -- best lap time for this driver
 );
 
 ALTER TABLE session_results 

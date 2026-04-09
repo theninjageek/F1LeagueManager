@@ -41,9 +41,16 @@ const resourceExists = async (table, id) => {
  */
 const updateWithWhitelist = async (table, id, updates, allowedFields) => {
   const filtered = {};
+  const jsonFields = ['points_matrix', 'session_config']; // JSONB fields that need stringification
+  
   for (const field of allowedFields) {
     if (field in updates) {
-      filtered[field] = updates[field];
+      // Stringify JSONB fields if they're objects
+      if (jsonFields.includes(field) && typeof updates[field] === 'object' && updates[field] !== null) {
+        filtered[field] = JSON.stringify(updates[field]);
+      } else {
+        filtered[field] = updates[field];
+      }
     }
   }
 
