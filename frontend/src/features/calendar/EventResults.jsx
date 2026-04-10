@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAvailableSessions, useEventResults } from '../../hooks/useEventResults';
+import { useAvailableSessions, useEventResults, useCurrentEvent } from '../../hooks/useEventResults';
 import { getPositionChange, formatLapTime } from '../../lib/formatters';
 import { SESSION_TYPES, SESSION_TYPE_LABELS } from '../../constants';
 
@@ -10,9 +10,12 @@ export const EventResults = () => {
 
   const { data: availableSessions = [] } = useAvailableSessions(eventId);
   const { data: results = [], isLoading } = useEventResults(eventId, session);
+  const { data: currentEvent = [] } = useCurrentEvent(eventId);
 
   // Determine if current session is qualifying
   const isQuali = session.includes('QUALIFYING');
+
+  const eventInfo = currentEvent[0];
 
   if (isLoading) {
     return (
@@ -24,6 +27,26 @@ export const EventResults = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4">
+      <h2 className="text-3xl font-black italic uppercase mb-8 border-l-4 border-f1-red pl-4">
+        {eventInfo ? (
+          <div style={{display: 'flex', gap: '10px', 'align-items': 'center'}}>
+            <img 
+              src={`/assets/tracks/${eventInfo.track_id}.avif`} 
+              alt={eventInfo.track_name}
+              //className="w-20 h-12 flex items-center justify-center bg-zinc-900/50 rounded p-1 border border-zinc-800/50 opacity-40 group-hover:opacity-100 transition-opacity grayscale invert"
+              className="w-20 h-12 grayscale invert"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+            R{eventInfo.round_number} {"/"} {eventInfo.track_name} - {eventInfo.country_code} {"/"} {
+              eventInfo.weekend_start 
+                ? new Date(eventInfo.weekend_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short'})
+                : 'TBC'
+            }
+          </div>
+        ) : (
+          "Event Details"
+        )}   
+      </h2>
       <Link 
         to="/calendar" 
         className="text-zinc-500 hover:text-white text-[10px] font-black uppercase tracking-[0.3em] mb-10 inline-block transition-colors"

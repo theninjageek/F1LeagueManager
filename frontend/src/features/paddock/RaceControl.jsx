@@ -116,6 +116,11 @@ export const RaceControl = () => {
   };
 
   const getPointsPreview = (index, driver) => {
+    // Only show points for race sessions, not qualifying
+    if (activeSession.includes('QUALIFYING')) {
+      return 0;
+    }
+
     let points = 0;
     const matrix = activeSession === 'GRAND_PRIX' ? pointsMatrix.race : pointsMatrix.sprint;
     

@@ -23,4 +23,20 @@ const getUpcomingEvents = async () => {
   return rows;
 };
 
-module.exports = { getUpcomingEvents };
+const getCurrentEvent = async (eventId) => {
+  const query = `
+    SELECT
+      e.track_id,
+      e.round_number,
+      e.weekend_start,
+      t.name as track_name,
+      t.country_code
+    FROM events e
+    JOIN tracks t on e.track_id = t.id
+    WHERE e.id = $1;
+  `;
+  const { rows } = await db.query(query, [eventId]);
+  return rows;
+}
+
+module.exports = { getUpcomingEvents, getCurrentEvent };

@@ -28,3 +28,17 @@ export const useEventResults = (eventId, sessionType = 'GRAND_PRIX') => {
     enabled: !!eventId && !!sessionType
   });
 };
+
+/**
+ * Fetch Current Event
+ */
+export const useCurrentEvent = (eventId) => {
+  return useQuery({
+    queryKey: ['currentEvent', eventId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/calendar?event_id=${eventId}`);
+      return data;
+    },
+    enabled: !!eventId
+  });
+};

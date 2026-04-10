@@ -41,7 +41,7 @@ const getResultsByEvent = async (eventId, sessionType = 'GRAND_PRIX') => {
       )) as calculated_grid
     FROM session_results sr
     JOIN drivers d ON sr.driver_id = d.id
-    JOIN teams t ON d.current_team_id = t.id
+    JOIN teams t ON sr.team_id = t.id
     WHERE sr.event_id = $1 AND sr.session_type = $2
     ORDER BY CASE WHEN sr.is_dnf THEN 1 ELSE 0 END, sr.position ASC;
   `;
